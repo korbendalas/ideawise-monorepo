@@ -1,0 +1,15 @@
+node_modules/
+vendor/
+.idea/
+package-lock.json
+.env
+.env.local
+.DS_Store
+dist/
+build/
+coverage/
+.expo/
+.turbo/
+var/cache/
+var/log/
+var/storage/

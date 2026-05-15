@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Media Upload",
+    "slug": "media-upload-mobile",
+    "scheme": "media-upload",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Media Upload to select photos and videos.",
+          "cameraPermission": "Allow Media Upload to capture photos and videos."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "READ_MEDIA_VIDEO"]
+    }
+  }
+}

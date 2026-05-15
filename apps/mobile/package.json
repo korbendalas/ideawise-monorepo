@@ -1,0 +1,24 @@
+{
+  "name": "@media-upload/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "test": "echo \"Add Jest tests with mocked Expo modules during Day 3 implementation\"",
+    "lint": "echo \"lint not configured yet\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@media-upload/shared-types": "workspace:*",
+    "@media-upload/upload-client": "workspace:*",
+    "expo": "^52.0.0",
+    "expo-image-picker": "^16.0.0",
+    "expo-router": "^4.0.0",
+    "react": "^18.3.1",
+    "react-native": "^0.76.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

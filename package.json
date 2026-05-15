@@ -1,0 +1,19 @@
+{
+  "name": "media-upload-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-platform media upload assignment with React, Expo, Symfony 6, and shared chunked upload logic.",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @media-upload/web dev",
+    "dev:mobile": "pnpm --filter @media-upload/mobile start",
+    "dev:api": "cd apps/api && symfony server:start",
+    "test": "pnpm -r test",
+    "test:client": "pnpm --filter @media-upload/upload-client test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
