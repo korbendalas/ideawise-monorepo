@@ -51,7 +51,7 @@ export class UploadManager {
 
   addFile(file: UploadSource): UploadTaskSnapshot {
     const now = new Date().toISOString();
-    const localId = crypto.randomUUID();
+    const localId = createLocalId();
     const task: UploadTaskSnapshot = {
       localId,
       file,
@@ -353,6 +353,16 @@ export class UploadManager {
   }
 }
 
+function createLocalId(): string {
+  const randomUUID = globalThis.crypto?.randomUUID;
+
+  if (randomUUID) {
+    return randomUUID.call(globalThis.crypto);
+  }
+
+  return `upload-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function delay(ms: number, signal: AbortSignal): Promise<void> {
   if (ms === 0 || signal.aborted) {
     return Promise.resolve();
@@ -364,7 +374,7 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
       "abort",
       () => {
         clearTimeout(timeout);
-        reject(new DOMException("Upload aborted", "AbortError"));
+        reject(createAbortError());
       },
       { once: true }
     );
@@ -372,7 +382,13 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
+  return hasErrorName(error, "AbortError");
+}
+
+function createAbortError(): Error {
+  const error = new Error("Upload aborted");
+  error.name = "AbortError";
+  return error;
 }
 
 function progressFromUploadedChunks(fileSize: number, chunkSize: number, uploadedChunkIndexes: number[]) {
@@ -422,4 +438,8 @@ function getErrorRetryable(error: unknown): boolean {
 
 function hasUploadError(error: unknown): error is { error: NonNullable<UploadTaskSnapshot["error"]> } {
   return typeof error === "object" && error !== null && "error" in error;
+}
+
+function hasErrorName(error: unknown, name: string): boolean {
+  return typeof error === "object" && error !== null && "name" in error && error.name === name;
 }

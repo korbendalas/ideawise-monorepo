@@ -11,7 +11,7 @@
     "lint": "echo \"lint not configured yet\""
   },
   "dependencies": {
-    "@media-upload/shared-types": "workspace:*"
+    "@media-upload/shared-types": "file:../shared-types"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",
