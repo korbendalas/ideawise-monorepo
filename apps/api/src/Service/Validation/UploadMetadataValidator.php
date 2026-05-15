@@ -29,7 +29,7 @@ final class UploadMetadataValidator
         }
 
         if ((int) $payload['fileSize'] <= 0) {
-            throw new UploadException('file_too_large', 'File must not be empty.');
+            throw new UploadException('invalid_file_size', 'File must not be empty.');
         }
 
         if ((int) $payload['chunkSize'] !== $this->chunkSize) {

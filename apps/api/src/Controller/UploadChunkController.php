@@ -31,7 +31,7 @@ final class UploadChunkController
         summary: 'Upload a single chunk',
         description: 'Send one chunk as multipart/form-data with the field name `chunk`. Chunks may be sent in parallel (max 3 concurrent). Re-uploading an already received chunk is a no-op.',
         parameters: [
-            new OA\Parameter(name: 'uploadId',   in: 'path', required: true, schema: new OA\Schema(type: 'string'), example: 'a3f1c2e4b5d6...'),
+            new OA\Parameter(name: 'uploadId',   in: 'path', required: true, schema: new OA\Schema(type: 'string', pattern: '^[a-f0-9]{32}$'), example: 'a3f1c2e4b5d64a1f8d6c0e2b9a7f1234'),
             new OA\Parameter(name: 'chunkIndex', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 0), description: 'Zero-based chunk index'),
         ],
         requestBody: new OA\RequestBody(

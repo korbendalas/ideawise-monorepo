@@ -31,7 +31,7 @@ final class FinalizeUploadController
         summary: 'Finalize an upload and reassemble the file',
         description: 'Triggers chunk reassembly, computes the MD5 checksum, runs magic-number MIME validation, deduplicates against existing files, and moves the assembled file to long-term storage.',
         parameters: [
-            new OA\Parameter(name: 'uploadId', in: 'path', required: true, schema: new OA\Schema(type: 'string'), example: 'a3f1c2e4b5d6...'),
+            new OA\Parameter(name: 'uploadId', in: 'path', required: true, schema: new OA\Schema(type: 'string', pattern: '^[a-f0-9]{32}$'), example: 'a3f1c2e4b5d64a1f8d6c0e2b9a7f1234'),
         ],
         responses: [
             new OA\Response(

@@ -56,7 +56,8 @@ nelmio_api_doc:
             uploadId:
               type: string
               nullable: true
-              example: 018f44d5-84f3-70aa-a9f4-7be6ad7f3d12
+              pattern: '^[a-f0-9]{32}$'
+              example: a3f1c2e4b5d64a1f8d6c0e2b9a7f1234
             status:
               type: string
               enum: [initialized, completed]
@@ -87,6 +88,7 @@ nelmio_api_doc:
           properties:
             uploadId:
               type: string
+              pattern: '^[a-f0-9]{32}$'
             chunkIndex:
               type: integer
               minimum: 0
@@ -100,6 +102,7 @@ nelmio_api_doc:
           properties:
             uploadId:
               type: string
+              pattern: '^[a-f0-9]{32}$'
             status:
               type: string
               enum: [initialized, uploading, finalizing, completed, failed, cancelled, expired]
@@ -122,6 +125,7 @@ nelmio_api_doc:
           properties:
             uploadId:
               type: string
+              pattern: '^[a-f0-9]{32}$'
             status:
               type: string
               enum: [completed]
@@ -134,6 +138,7 @@ nelmio_api_doc:
           properties:
             uploadId:
               type: string
+              pattern: '^[a-f0-9]{32}$'
             status:
               type: string
               enum: [cancelled]
@@ -166,10 +171,10 @@ nelmio_api_doc:
               properties:
                 code:
                   type: string
-                  example: missing_chunks
+                  example: invalid_file_size
                 message:
                   type: string
-                  example: Upload cannot be finalized because chunks are missing.
+                  example: File must not be empty.
                 retryable:
                   type: boolean
                   example: false

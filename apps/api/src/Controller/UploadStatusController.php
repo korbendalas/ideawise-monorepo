@@ -26,7 +26,7 @@ final class UploadStatusController
         summary: 'Query upload session status',
         description: 'Returns the current status of an upload session including received chunk indexes. Poll this endpoint to display progress.',
         parameters: [
-            new OA\Parameter(name: 'uploadId', in: 'path', required: true, schema: new OA\Schema(type: 'string'), example: 'a3f1c2e4b5d6...'),
+            new OA\Parameter(name: 'uploadId', in: 'path', required: true, schema: new OA\Schema(type: 'string', pattern: '^[a-f0-9]{32}$'), example: 'a3f1c2e4b5d64a1f8d6c0e2b9a7f1234'),
         ],
         responses: [
             new OA\Response(
