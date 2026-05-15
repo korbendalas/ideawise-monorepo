@@ -93,6 +93,39 @@ describe("ApiClient", () => {
         (error as { error: { code: string; retryable: boolean } }).error.retryable
     );
   });
+
+  it("keeps the default browser fetch bound to the global object", async () => {
+    const originalFetch = globalThis.fetch;
+
+    try {
+      globalThis.fetch = async function (this: typeof globalThis, url: string | URL | Request) {
+        assert.equal(this, globalThis);
+        assert.equal(String(url), "http://localhost:8000/api/uploads/initiate");
+
+        return jsonResponse({
+          uploadId: "0123456789abcdef0123456789abcdef",
+          status: "initialized",
+          alreadyUploaded: false,
+          uploadedChunkIndexes: [],
+          maxConcurrentChunks: 3,
+          chunkSize: 1024 * 1024
+        });
+      } as typeof fetch;
+
+      const client = new ApiClient({ baseUrl: "http://localhost:8000/api" });
+      const initiated = await client.initiate({
+        fileName: "clip.jpg",
+        fileSize: 12,
+        mimeType: "image/jpeg",
+        totalChunks: 1,
+        chunkSize: 1024 * 1024
+      });
+
+      assert.equal(initiated.status, "initialized");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 function jsonResponse(body: unknown, status = 200): Response {

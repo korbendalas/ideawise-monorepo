@@ -40,6 +40,25 @@ describe("UploadManager", () => {
     assert.equal(manager.getTask(task.localId)?.status, "completed");
   });
 
+  it("keeps browser File metadata when the upload completes", async () => {
+    const api = new FakeApiClient();
+    const manager = new UploadManager({ apiClient: api });
+    const file = Object.assign(new File(["image"], "browser-file.jpg", { type: "image/jpeg" }), {
+      previewUri: "blob:browser-file.jpg"
+    });
+
+    const task = manager.addFile(file);
+    await manager.start(task.localId);
+
+    const completed = manager.getTask(task.localId);
+    assert.equal(completed?.status, "completed");
+    assert.equal(completed?.file.name, "browser-file.jpg");
+    assert.equal(completed?.file.size, 5);
+    assert.equal(completed?.file.type, "image/jpeg");
+    assert.equal(completed?.file.previewUri, "blob:browser-file.jpg");
+    assert.equal(completed?.file.uri, "/media/clip.jpg");
+  });
+
   it("pauses by aborting in-flight chunk uploads", async () => {
     const api = new FakeApiClient({ holdChunks: true });
     const manager = new UploadManager({ apiClient: api });

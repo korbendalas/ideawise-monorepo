@@ -38,6 +38,12 @@ import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  deserializeCompletedTasks,
+  mergeCompletedTasks,
+  serializeCompletedTasks,
+  uploadHistoryStorageKey
+} from "./uploadHistory";
 
 const maxFileSizeBytes = 250 * 1024 * 1024;
 
@@ -55,6 +61,9 @@ export function UploadApp() {
     []
   );
   const [tasks, setTasks] = useState<UploadTaskSnapshot[]>(() => manager.listTasks());
+  const [completedHistory, setCompletedHistory] = useState<UploadTaskSnapshot[]>(() =>
+    readCompletedHistory()
+  );
 
   useEffect(() => manager.subscribe(setTasks), [manager]);
 
@@ -81,9 +90,29 @@ export function UploadApp() {
     toast.success(`${selected.length} file${selected.length === 1 ? "" : "s"} queued for upload.`);
   }
 
-  const summary = getSummary(tasks);
-  const activeTasks = tasks.filter((task) => task.status !== "completed");
-  const completedTasks = tasks.filter((task) => task.status === "completed");
+  const summary = useMemo(() => getSummary(tasks), [tasks]);
+  const activeTasks = useMemo(() => tasks.filter((task) => task.status !== "completed"), [tasks]);
+  const completedTasks = useMemo(() => tasks.filter((task) => task.status === "completed"), [tasks]);
+  const visibleCompletedTasks = useMemo(
+    () => mergeCompletedTasks(completedHistory, completedTasks),
+    [completedHistory, completedTasks]
+  );
+
+  useEffect(() => {
+    if (completedTasks.length === 0) {
+      return;
+    }
+
+    setCompletedHistory((currentHistory) => {
+      const merged = mergeCompletedTasks(currentHistory, completedTasks);
+      if (serializeCompletedTasks(merged) === serializeCompletedTasks(currentHistory)) {
+        return currentHistory;
+      }
+
+      writeCompletedHistory(merged);
+      return merged;
+    });
+  }, [completedTasks]);
 
   return (
     <TooltipProvider>
@@ -218,7 +247,7 @@ export function UploadApp() {
                   <TabsContent value="completed">
                     <TaskList
                       emptyLabel="Completed media will appear here."
-                      tasks={completedTasks}
+                      tasks={visibleCompletedTasks}
                       manager={manager}
                     />
                   </TabsContent>
@@ -455,4 +484,20 @@ function normalizeMediaUrl(url: string): string {
   }
 
   return url;
+}
+
+function readCompletedHistory(): UploadTaskSnapshot[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  return deserializeCompletedTasks(window.localStorage.getItem(uploadHistoryStorageKey));
+}
+
+function writeCompletedHistory(tasks: UploadTaskSnapshot[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(uploadHistoryStorageKey, serializeCompletedTasks(tasks));
 }

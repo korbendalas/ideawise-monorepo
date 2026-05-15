@@ -34,7 +34,7 @@ export class ApiClient {
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? "/api").replace(/\/$/, "");
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
   }
 
   initiate(request: InitiateUploadRequest, signal?: AbortSignal): Promise<InitiateUploadResponse> {

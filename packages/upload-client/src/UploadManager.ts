@@ -125,11 +125,7 @@ export class UploadManager {
               totalBytes: current.file.size,
               percentage: 100
             },
-            file: {
-              ...current.file,
-              uri: initiated.file.url,
-              checksum: initiated.file.checksum
-            }
+            file: completeFileMetadata(current.file, initiated.file.url, initiated.file.checksum)
           });
           return;
         }
@@ -154,11 +150,7 @@ export class UploadManager {
       this.patchTask(localId, {
         status: "completed",
         error: undefined,
-        file: {
-          ...current.file,
-          uri: uploadedFile.url,
-          checksum: uploadedFile.checksum
-        },
+        file: completeFileMetadata(current.file, uploadedFile.url, uploadedFile.checksum),
         progress: {
           uploadedBytes: current.file.size,
           totalBytes: current.file.size,
@@ -390,6 +382,17 @@ function progressFromUploadedChunks(fileSize: number, chunkSize: number, uploade
     uploadedBytes,
     totalBytes: fileSize,
     percentage: fileSize === 0 ? 0 : Math.round((uploadedBytes / fileSize) * 100)
+  };
+}
+
+function completeFileMetadata(file: UploadFileMetadata, uri: string, checksum: string): UploadFileMetadata {
+  return {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    previewUri: file.previewUri,
+    uri,
+    checksum
   };
 }
 
