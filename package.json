@@ -7,7 +7,12 @@
   "scripts": {
     "dev:web": "pnpm --filter @media-upload/web dev",
     "dev:mobile": "pnpm --filter @media-upload/mobile start",
-    "dev:api": "cd apps/api && symfony server:start",
+    "dev:api": "./scripts/docker-compose.sh up api",
+    "dev:api:detached": "./scripts/docker-compose.sh up -d api",
+    "logs:api": "./scripts/docker-compose.sh logs -f api",
+    "stop:api": "./scripts/docker-compose.sh down",
+    "test:api": "./scripts/docker-compose.sh run --rm api vendor/bin/phpunit",
+    "validate:api": "./scripts/docker-compose.sh run --rm api composer validate --strict",
     "test": "pnpm -r test",
     "test:client": "pnpm --filter @media-upload/upload-client test",
     "lint": "pnpm -r lint",

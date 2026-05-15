@@ -1,0 +1,179 @@
+nelmio_api_doc:
+  documentation:
+    info:
+      title: Media Upload API
+      description: |
+        Production-grade chunked upload API for image and video media.
+
+        The API accepts fixed 1 MB chunks, supports resumable client workflows, validates file content with server-side MIME detection, deduplicates completed uploads by checksum, and cleans up temporary upload data.
+
+        Standard flow: initiate an upload session, send chunks, poll status when needed, finalize the upload, or cancel to discard temporary chunks.
+
+        Mutation endpoints are rate limited to 10 requests per minute per IP.
+      version: '1.0.0'
+      contact:
+        name: Ideawise Engineering
+    servers:
+      - url: 'http://localhost:8000'
+        description: Local development server
+    components:
+      schemas:
+        InitiateUploadRequest:
+          type: object
+          required: [fileName, fileSize, mimeType, totalChunks, chunkSize]
+          properties:
+            fileName:
+              type: string
+              example: photo.jpg
+            fileSize:
+              type: integer
+              format: int64
+              minimum: 1
+              example: 5242880
+              description: Total file size in bytes.
+            mimeType:
+              type: string
+              example: image/jpeg
+              description: Client-declared image or video MIME type.
+            totalChunks:
+              type: integer
+              minimum: 1
+              example: 5
+            chunkSize:
+              type: integer
+              enum: [1048576]
+              example: 1048576
+              description: Fixed chunk size. Must be exactly 1 MB.
+            checksum:
+              type: string
+              nullable: true
+              example: d41d8cd98f00b204e9800998ecf8427e
+              description: Optional MD5 checksum used for deduplication.
+        InitiateUploadResponse:
+          type: object
+          required: [uploadId, status, alreadyUploaded, uploadedChunkIndexes, maxConcurrentChunks, chunkSize]
+          properties:
+            uploadId:
+              type: string
+              nullable: true
+              example: 018f44d5-84f3-70aa-a9f4-7be6ad7f3d12
+            status:
+              type: string
+              enum: [initialized, completed]
+              example: initialized
+            alreadyUploaded:
+              type: boolean
+              example: false
+            uploadedChunkIndexes:
+              type: array
+              items:
+                type: integer
+            maxConcurrentChunks:
+              type: integer
+              enum: [3]
+              example: 3
+            chunkSize:
+              type: integer
+              enum: [1048576]
+              example: 1048576
+            file:
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/UploadedFile'
+              description: Present when the checksum matches an already stored file.
+        ChunkUploadResponse:
+          type: object
+          required: [uploadId, chunkIndex, status]
+          properties:
+            uploadId:
+              type: string
+            chunkIndex:
+              type: integer
+              minimum: 0
+            status:
+              type: string
+              enum: [received]
+              example: received
+        UploadStatusResponse:
+          type: object
+          required: [uploadId, status, fileName, totalChunks, receivedChunks, uploadedChunkIndexes, expiresAt]
+          properties:
+            uploadId:
+              type: string
+            status:
+              type: string
+              enum: [initialized, uploading, finalizing, completed, failed, cancelled, expired]
+            fileName:
+              type: string
+            totalChunks:
+              type: integer
+            receivedChunks:
+              type: integer
+            uploadedChunkIndexes:
+              type: array
+              items:
+                type: integer
+            expiresAt:
+              type: string
+              format: date-time
+        FinalizeUploadResponse:
+          type: object
+          required: [uploadId, status, file]
+          properties:
+            uploadId:
+              type: string
+            status:
+              type: string
+              enum: [completed]
+              example: completed
+            file:
+              $ref: '#/components/schemas/UploadedFile'
+        CancelUploadResponse:
+          type: object
+          required: [uploadId, status]
+          properties:
+            uploadId:
+              type: string
+            status:
+              type: string
+              enum: [cancelled]
+              example: cancelled
+        UploadedFile:
+          type: object
+          required: [id, fileName, mimeType, size, checksum, url]
+          properties:
+            id:
+              type: string
+            fileName:
+              type: string
+            mimeType:
+              type: string
+            size:
+              type: integer
+              format: int64
+            checksum:
+              type: string
+            url:
+              type: string
+              example: /media/2026/05/15/d41d8cd98f00b204e9800998ecf8427e.jpg
+        ErrorResponse:
+          type: object
+          required: [error]
+          properties:
+            error:
+              type: object
+              required: [code, message, retryable]
+              properties:
+                code:
+                  type: string
+                  example: missing_chunks
+                message:
+                  type: string
+                  example: Upload cannot be finalized because chunks are missing.
+                retryable:
+                  type: boolean
+                  example: false
+  areas:
+    default:
+      path_patterns:
+        - ^/api
