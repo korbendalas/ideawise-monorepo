@@ -49,6 +49,7 @@ const maxFileSizeBytes = 250 * 1024 * 1024;
 
 export function UploadApp() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewObjectUrlsRef = useRef(new Set<string>());
   const [isDragging, setIsDragging] = useState(false);
   const [validationMessages, setValidationMessages] = useState<string[]>([]);
   const manager = useMemo(
@@ -80,8 +81,10 @@ export function UploadApp() {
     setValidationMessages([]);
 
     for (const file of selected) {
+      const previewUri = URL.createObjectURL(file);
+      previewObjectUrlsRef.current.add(previewUri);
       const source: UploadSource = Object.assign(file, {
-        previewUri: URL.createObjectURL(file)
+        previewUri
       });
       const task = manager.addFile(source);
       void manager.start(task.localId);
@@ -91,11 +94,42 @@ export function UploadApp() {
   }
 
   const summary = useMemo(() => getSummary(tasks), [tasks]);
-  const activeTasks = useMemo(() => tasks.filter((task) => task.status !== "completed"), [tasks]);
+  const activeTasks = useMemo(
+    () => tasks.filter((task) => task.status !== "completed" && task.status !== "cancelled"),
+    [tasks]
+  );
   const completedTasks = useMemo(() => tasks.filter((task) => task.status === "completed"), [tasks]);
+  const persistedCompletedTasks = useMemo(
+    () => deserializeCompletedTasks(serializeCompletedTasks(completedTasks)),
+    [completedTasks]
+  );
   const visibleCompletedTasks = useMemo(
-    () => mergeCompletedTasks(completedHistory, completedTasks),
-    [completedHistory, completedTasks]
+    () => mergeCompletedTasks(completedHistory, persistedCompletedTasks),
+    [completedHistory, persistedCompletedTasks]
+  );
+
+  useEffect(() => {
+    for (const task of tasks) {
+      const previewUri = task.file.previewUri;
+      if (!previewUri || !previewObjectUrlsRef.current.has(previewUri)) {
+        continue;
+      }
+
+      if (task.status === "completed" || task.status === "cancelled") {
+        URL.revokeObjectURL(previewUri);
+        previewObjectUrlsRef.current.delete(previewUri);
+      }
+    }
+  }, [tasks]);
+
+  useEffect(
+    () => () => {
+      for (const previewUri of previewObjectUrlsRef.current) {
+        URL.revokeObjectURL(previewUri);
+      }
+      previewObjectUrlsRef.current.clear();
+    },
+    []
   );
 
   useEffect(() => {
@@ -295,7 +329,7 @@ function TaskRow({ task, manager }: { task: UploadTaskSnapshot; manager: UploadM
   const canPause = task.status === "uploading" || task.status === "retrying" || task.status === "initializing";
   const canResume = task.status === "paused";
   const canRetry = task.status === "failed";
-  const mediaUrl = task.file.uri ? normalizeMediaUrl(task.file.uri) : undefined;
+  const mediaUrl = task.file.uri;
 
   return (
     <article className="grid gap-3 rounded-lg border bg-card p-3 shadow-sm sm:grid-cols-[88px_minmax(0,1fr)_auto]">
@@ -476,14 +510,6 @@ function formatBytes(bytes: number): string {
   const value = bytes / 1024 ** exponent;
 
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[exponent]}`;
-}
-
-function normalizeMediaUrl(url: string): string {
-  if (url.startsWith("http")) {
-    return url;
-  }
-
-  return url;
 }
 
 function readCompletedHistory(): UploadTaskSnapshot[] {

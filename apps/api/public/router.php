@@ -1,11 +1,12 @@
 <?php
 // Router script for PHP's built-in web server.
-// Serves existing static files directly; routes everything else through Symfony.
+// In local development, serves existing static files directly and routes everything else through Symfony.
 
 $requestUri = $_SERVER['REQUEST_URI'];
-$filePath   = __DIR__ . parse_url($requestUri, PHP_URL_PATH);
+$requestPath = parse_url($requestUri, PHP_URL_PATH);
+$filePath = is_string($requestPath) ? __DIR__ . $requestPath : null;
 
-if (is_file($filePath)) {
+if ($filePath !== null && is_file($filePath)) {
     return false; // let PHP serve the static file natively
 }
 

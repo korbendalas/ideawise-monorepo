@@ -86,6 +86,10 @@ export class UploadManager {
       return;
     }
 
+    if (runtime.started && ["initializing", "uploading", "retrying", "finalizing"].includes(task.status)) {
+      return;
+    }
+
     if (!runtime.source.slice) {
       this.failTask(localId, {
         code: "invalid_type",
@@ -101,6 +105,9 @@ export class UploadManager {
 
     try {
       let current = this.patchTask(localId, { status: task.uploadId ? "uploading" : "initializing" });
+      if (!current) {
+        return;
+      }
 
       if (!current.uploadId) {
         const initiated = await this.apiClient.initiate(
@@ -116,7 +123,7 @@ export class UploadManager {
         );
 
         if (initiated.status === "completed" && initiated.file) {
-          this.patchTask(localId, {
+          this.patchTask(localId, withoutUndefined({
             uploadId: initiated.uploadId ?? undefined,
             status: "completed",
             uploadedChunkIndexes: Array.from({ length: current.totalChunks }, (_, index) => index),
@@ -126,16 +133,19 @@ export class UploadManager {
               percentage: 100
             },
             file: completeFileMetadata(current.file, initiated.file.url, initiated.file.checksum)
-          });
+          }));
           return;
         }
 
-        current = this.patchTask(localId, {
+        current = this.patchTask(localId, withoutUndefined({
           uploadId: initiated.uploadId ?? undefined,
           status: "uploading",
           uploadedChunkIndexes: initiated.uploadedChunkIndexes,
           progress: progressFromUploadedChunks(current.file.size, this.chunkSize, initiated.uploadedChunkIndexes)
-        });
+        }));
+        if (!current) {
+          return;
+        }
       }
 
       await this.uploadMissingChunks(localId, runtime, abortController.signal);
@@ -170,6 +180,9 @@ export class UploadManager {
         message: getErrorMessage(error),
         retryable: getErrorRetryable(error)
       });
+    } finally {
+      runtime.started = false;
+      runtime.abortController = undefined;
     }
   }
 
@@ -204,12 +217,15 @@ export class UploadManager {
     const runtime = this.runtimes.get(localId);
     runtime?.abortController?.abort();
     const task = this.tasks.get(localId);
+    this.patchStatus(localId, "cancelled");
 
     if (task?.uploadId) {
-      await this.apiClient.cancel(task.uploadId);
+      try {
+        await this.apiClient.cancel(task.uploadId);
+      } catch {
+        // Local cancellation is authoritative; remote cleanup may fail if the session already expired.
+      }
     }
-
-    this.patchStatus(localId, "cancelled");
   }
 
   getConcurrencyLimit(): number {
@@ -220,11 +236,11 @@ export class UploadManager {
     this.patchTask(localId, { status });
   }
 
-  private patchTask(localId: string, patch: Partial<UploadTaskSnapshot>): UploadTaskSnapshot {
+  private patchTask(localId: string, patch: Partial<UploadTaskSnapshot>): UploadTaskSnapshot | undefined {
     const task = this.tasks.get(localId);
 
     if (!task) {
-      throw new Error(`Upload task ${localId} does not exist.`);
+      return undefined;
     }
 
     const updated = {
@@ -250,7 +266,8 @@ export class UploadManager {
     let cursor = 0;
 
     const worker = async () => {
-      while (cursor < chunks.length && !signal.aborted) {
+      while (cursor < chunks.length) {
+        throwIfAborted(signal);
         const chunk = chunks[cursor];
         cursor += 1;
 
@@ -278,7 +295,9 @@ export class UploadManager {
   ): Promise<void> {
     let attempt = 0;
 
-    while (!signal.aborted) {
+    while (true) {
+      throwIfAborted(signal);
+
       try {
         const chunk = runtime.source.slice?.(start, end);
 
@@ -354,7 +373,9 @@ export class UploadManager {
 }
 
 function delay(ms: number, signal: AbortSignal): Promise<void> {
-  if (ms === 0 || signal.aborted) {
+  throwIfAborted(signal);
+
+  if (ms === 0) {
     return Promise.resolve();
   }
 
@@ -375,8 +396,18 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw new DOMException("Upload aborted", "AbortError");
+  }
+}
+
 function progressFromUploadedChunks(fileSize: number, chunkSize: number, uploadedChunkIndexes: number[]) {
-  const uploadedBytes = Math.min(uploadedChunkIndexes.length * chunkSize, fileSize);
+  const uploadedBytes = uploadedChunkIndexes.reduce((total, chunkIndex) => {
+    const chunkStart = chunkIndex * chunkSize;
+    const chunkBytes = Math.max(0, Math.min(chunkSize, fileSize - chunkStart));
+    return total + chunkBytes;
+  }, 0);
 
   return {
     uploadedBytes,
@@ -422,4 +453,8 @@ function getErrorRetryable(error: unknown): boolean {
 
 function hasUploadError(error: unknown): error is { error: NonNullable<UploadTaskSnapshot["error"]> } {
   return typeof error === "object" && error !== null && "error" in error;
+}
+
+function withoutUndefined<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 }

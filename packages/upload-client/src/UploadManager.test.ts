@@ -71,29 +71,92 @@ describe("UploadManager", () => {
 
     assert.equal(manager.getTask(task.localId)?.status, "paused");
   });
+
+  it("keeps local cancellation when remote cancellation fails", async () => {
+    const api = new FakeApiClient({ failCancel: true });
+    const manager = new UploadManager({ apiClient: api });
+    const task = manager.addFile(createSource("clip.jpg", CHUNK_SIZE_BYTES + 12));
+
+    await manager.start(task.localId);
+    await manager.cancel(task.localId);
+
+    assert.equal(manager.getTask(task.localId)?.status, "cancelled");
+  });
+
+  it("ignores duplicate start calls while an upload is already active", async () => {
+    const api = new FakeApiClient({ holdChunks: true });
+    const manager = new UploadManager({ apiClient: api });
+    const task = manager.addFile(createSource("clip.jpg", CHUNK_SIZE_BYTES + 12));
+
+    const firstUpload = manager.start(task.localId);
+    await api.waitForChunkStart();
+    await manager.start(task.localId);
+    manager.pause(task.localId);
+    await firstUpload;
+
+    assert.equal(api.initiateCalls, 1);
+    assert.deepEqual(api.uploadedChunks, []);
+    assert.equal(manager.getTask(task.localId)?.status, "paused");
+  });
+
+  it("counts uploaded bytes from each uploaded chunk index", async () => {
+    const api = new FakeApiClient({ alreadyUploadedChunkIndexes: [1], holdChunks: true });
+    const manager = new UploadManager({ apiClient: api });
+    const fileSize = CHUNK_SIZE_BYTES + CHUNK_SIZE_BYTES / 2;
+    const task = manager.addFile(createSource("clip.jpg", fileSize));
+
+    const upload = manager.start(task.localId);
+    await api.waitForChunkStart();
+
+    assert.equal(manager.getTask(task.localId)?.progress.uploadedBytes, CHUNK_SIZE_BYTES / 2);
+    assert.equal(manager.getTask(task.localId)?.progress.percentage, 33);
+
+    manager.pause(task.localId);
+    await upload;
+  });
+
+  it("ignores status updates for unknown local tasks", () => {
+    const manager = new UploadManager({ apiClient: new FakeApiClient() });
+
+    assert.doesNotThrow(() => manager.pause("missing-task"));
+  });
 });
 
 class FakeApiClient {
   uploadedChunks: number[] = [];
   chunkAttempts: Record<number, number> = {};
+  initiateCalls = 0;
   private readonly failChunkOnce?: number;
+  private readonly failCancel: boolean;
   private readonly holdChunks: boolean;
+  private readonly alreadyUploadedChunkIndexes: number[];
   private chunkStarted?: () => void;
   private readonly chunkStartedPromise = new Promise<void>((resolve) => {
     this.chunkStarted = resolve;
   });
 
-  constructor(options: { failChunkOnce?: number; holdChunks?: boolean } = {}) {
+  constructor(
+    options: {
+      alreadyUploadedChunkIndexes?: number[];
+      failCancel?: boolean;
+      failChunkOnce?: number;
+      holdChunks?: boolean;
+    } = {}
+  ) {
+    this.alreadyUploadedChunkIndexes = options.alreadyUploadedChunkIndexes ?? [];
+    this.failCancel = options.failCancel ?? false;
     this.failChunkOnce = options.failChunkOnce;
     this.holdChunks = options.holdChunks ?? false;
   }
 
   async initiate() {
+    this.initiateCalls += 1;
+
     return {
       uploadId: "0123456789abcdef0123456789abcdef",
       status: "initialized" as const,
       alreadyUploaded: false,
-      uploadedChunkIndexes: [],
+      uploadedChunkIndexes: this.alreadyUploadedChunkIndexes,
       maxConcurrentChunks: 3,
       chunkSize: CHUNK_SIZE_BYTES
     };
@@ -130,6 +193,10 @@ class FakeApiClient {
   }
 
   async cancel() {
+    if (this.failCancel) {
+      throw new Error("remote cancel failed");
+    }
+
     return undefined;
   }
 

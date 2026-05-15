@@ -9,6 +9,7 @@ describe("validateFiles", () => {
     });
 
     assert.equal(errors[0]?.code, "invalid_file_size");
+    assert.equal(errors[0]?.message, "File must not be empty.");
   });
 
   it("returns file_too_large for files over the configured limit", () => {
