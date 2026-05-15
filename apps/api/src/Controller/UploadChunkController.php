@@ -10,6 +10,7 @@ use App\Service\Upload\ChunkStorageService;
 use OpenApi\Attributes as OA;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -29,22 +30,28 @@ final class UploadChunkController
         path: '/api/uploads/{uploadId}/chunks/{chunkIndex}',
         operationId: 'uploadChunk',
         summary: 'Upload a single chunk',
-        description: 'Send one chunk as multipart/form-data with the field name `chunk`. Chunks may be sent in parallel (max 3 concurrent). Re-uploading an already received chunk is a no-op.',
+        description: 'Send one chunk as application/octet-stream or multipart/form-data with the field name `chunk`. Chunks may be sent in parallel (max 3 concurrent). Re-uploading an already received chunk is a no-op.',
         parameters: [
             new OA\Parameter(name: 'uploadId',   in: 'path', required: true, schema: new OA\Schema(type: 'string', pattern: '^[a-f0-9]{32}$'), example: 'a3f1c2e4b5d64a1f8d6c0e2b9a7f1234'),
             new OA\Parameter(name: 'chunkIndex', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 0), description: 'Zero-based chunk index'),
         ],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\MediaType(
-                mediaType: 'multipart/form-data',
-                schema: new OA\Schema(
-                    required: ['chunk'],
-                    properties: [
-                        new OA\Property(property: 'chunk', type: 'string', format: 'binary', description: 'Raw chunk bytes up to 1 MB. Only the final chunk may be smaller.'),
-                    ]
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/octet-stream',
+                    schema: new OA\Schema(type: 'string', format: 'binary', description: 'Raw chunk bytes up to 1 MB. Only the final chunk may be smaller.')
+                ),
+                new OA\MediaType(
+                    mediaType: 'multipart/form-data',
+                    schema: new OA\Schema(
+                        required: ['chunk'],
+                        properties: [
+                            new OA\Property(property: 'chunk', type: 'string', format: 'binary', description: 'Raw chunk bytes up to 1 MB. Only the final chunk may be smaller.'),
+                        ]
+                    )
                 )
-            )
+            ]
         ),
         responses: [
             new OA\Response(
@@ -92,7 +99,19 @@ final class UploadChunkController
                 throw new UploadException('upload_not_found', 'Upload session was not found.', false, 404);
             }
 
-            $chunk = $this->service->receive($session, $chunkIndex, $request->files->get('chunk'));
+            $temporaryPath = null;
+            $chunkFile = $request->files->get('chunk');
+            if (!$chunkFile instanceof UploadedFile) {
+                [$chunkFile, $temporaryPath] = $this->uploadedFileFromRawBody($request, $chunkIndex);
+            }
+
+            try {
+                $chunk = $this->service->receive($session, $chunkIndex, $chunkFile);
+            } finally {
+                if ($temporaryPath !== null && is_file($temporaryPath)) {
+                    unlink($temporaryPath);
+                }
+            }
             $this->logger->info('Upload chunk received.', [
                 'uploadId' => $uploadId,
                 'chunkIndex' => $chunk->getChunkIndex(),
@@ -106,5 +125,32 @@ final class UploadChunkController
         } catch (UploadException $exception) {
             return $this->errors->fromUploadException($exception);
         }
+    }
+
+    /**
+     * @return array{0: UploadedFile|null, 1: string|null}
+     */
+    private function uploadedFileFromRawBody(Request $request, int $chunkIndex): array
+    {
+        $content = $request->getContent();
+        if ($content === '') {
+            return [null, null];
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'upload_chunk_');
+        if ($path === false || file_put_contents($path, $content) === false) {
+            throw new UploadException('invalid_chunk', 'Chunk could not be buffered for storage.');
+        }
+
+        return [
+            new UploadedFile(
+                $path,
+                sprintf('chunk_%06d.part', $chunkIndex),
+                'application/octet-stream',
+                null,
+                true
+            ),
+            $path,
+        ];
     }
 }

@@ -34,7 +34,13 @@ export function validateFiles(files: ValidatableFile[], options: ValidationOptio
       });
     }
 
-    if (file.size <= 0 || file.size > options.maxFileSizeBytes) {
+    if (file.size <= 0) {
+      errors.push({
+        code: "invalid_file_size",
+        message: `${file.name} is empty and cannot be uploaded.`,
+        retryable: false
+      });
+    } else if (file.size > options.maxFileSizeBytes) {
       errors.push({
         code: "file_too_large",
         message: `${file.name} exceeds the configured size limit.`,

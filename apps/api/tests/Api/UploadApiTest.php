@@ -90,6 +90,22 @@ final class UploadApiTest extends WebTestCase
         self::assertSame(1, $payload['receivedChunks']);
     }
 
+    public function testUploadChunkAcceptsRawPutBody(): void
+    {
+        $client = $this->createUploadClient();
+        $bytes = $this->jpegBytes();
+        $uploadId = $this->initiate($client, strlen($bytes), 1);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: $bytes
+        );
+
+        self::assertResponseIsSuccessful();
+    }
+
     public function testFinalizeCreatesMediaFile(): void
     {
         $client = $this->createUploadClient();
