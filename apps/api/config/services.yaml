@@ -1,0 +1,35 @@
+parameters:
+  upload.chunk_size: '%env(int:UPLOAD_CHUNK_SIZE)%'
+  upload.tmp_dir: '%env(resolve:UPLOAD_TMP_DIR)%'
+  upload.media_dir: '%env(resolve:UPLOAD_MEDIA_DIR)%'
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    bind:
+      Symfony\Component\RateLimiter\RateLimiterFactory $uploadApiLimiter: '@limiter.upload_api'
+
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/Entity/'
+      - '../src/Kernel.php'
+
+  App\Controller\:
+    resource: '../src/Controller/'
+    tags: ['controller.service_arguments']
+    public: true
+
+  App\Service\Validation\UploadMetadataValidator:
+    arguments:
+      $chunkSize: '%upload.chunk_size%'
+
+  App\Service\Validation\ChunkValidator:
+    arguments:
+      $chunkSize: '%upload.chunk_size%'
+
+  App\Service\Storage\LocalMediaStorage:
+    arguments:
+      $tmpRoot: '%upload.tmp_dir%'
+      $mediaRoot: '%upload.media_dir%'

@@ -1,0 +1,15 @@
+monolog:
+  channels:
+    - upload
+  handlers:
+    main:
+      type: stream
+      path: '%kernel.logs_dir%/%kernel.environment%.log'
+      level: debug
+      channels: ['!event']
+
+when@test:
+  monolog:
+    handlers:
+      main:
+        type: test
