@@ -16,6 +16,7 @@ export type UploadStatus =
 
 export type UploadErrorCode =
   | "invalid_type"
+  | "invalid_file_size"
   | "file_too_large"
   | "too_many_files"
   | "network_error"

@@ -10,9 +10,9 @@ services:
       - api-var:/app/var
     command: >
       sh -lc "composer install &&
-      php bin/console doctrine:database:create --if-not-exists &&
+      mkdir -p var/storage/tmp var/storage/media &&
       php bin/console doctrine:migrations:migrate --no-interaction &&
-      php -S 0.0.0.0:8000 -t public"
+      php -S 0.0.0.0:8000 -t public public/router.php"
 
 volumes:
   api-var:

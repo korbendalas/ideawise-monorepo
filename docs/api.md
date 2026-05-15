@@ -160,6 +160,7 @@ Response:
 
 ```text
 invalid_type
+invalid_file_size
 file_too_large
 too_many_files
 upload_not_found

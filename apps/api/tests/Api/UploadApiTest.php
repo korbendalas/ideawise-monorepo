@@ -10,6 +10,9 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class UploadApiTest extends WebTestCase
 {
+    /** @var string[] */
+    private array $tempFiles = [];
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -23,6 +26,19 @@ final class UploadApiTest extends WebTestCase
         }
 
         self::ensureKernelShutdown();
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->tempFiles as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        $this->tempFiles = [];
+
+        parent::tearDown();
     }
 
     public function testInitiateUploadCreatesSession(): void
@@ -93,6 +109,9 @@ final class UploadApiTest extends WebTestCase
         self::assertSame('image/jpeg', $payload['file']['mimeType']);
         $path = rtrim((string) self::getContainer()->getParameter('upload.media_dir'), '/').'/'.str_replace('/media/', '', $payload['file']['url']);
         self::assertFileExists($path);
+
+        $client->request('GET', $payload['file']['url']);
+        self::assertResponseIsSuccessful();
     }
 
     private function createUploadClient(): KernelBrowser
@@ -121,6 +140,7 @@ final class UploadApiTest extends WebTestCase
     {
         $path = tempnam(sys_get_temp_dir(), 'upload-chunk');
         file_put_contents($path, $contents);
+        $this->tempFiles[] = $path;
 
         return new UploadedFile($path, 'chunk.part', 'application/octet-stream', null, true);
     }

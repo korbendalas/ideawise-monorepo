@@ -4,8 +4,7 @@
 
 - Node.js 20+
 - pnpm 9+
-- Docker
-- docker-compose
+- Docker Desktop, including Docker Compose
 
 Local PHP, Composer, and Symfony CLI are not required. The backend runs inside Docker.
 
@@ -29,25 +28,44 @@ pnpm install
 From the repository root:
 
 ```bash
-docker-compose up api
+pnpm dev:api
 ```
 
-The API is available at:
+The API and Swagger UI are available at:
 
 ```text
 http://localhost:8000/api
+http://localhost:8000/api-docs.html
 ```
 
 The container installs Composer dependencies, creates the SQLite database, runs migrations, and starts PHP's built-in server.
 
+To run the API in the background:
+
+```bash
+pnpm dev:api:detached
+```
+
+To follow backend logs:
+
+```bash
+pnpm logs:api
+```
+
+To stop the backend:
+
+```bash
+pnpm stop:api
+```
+
 ## Backend Commands
 
 ```bash
-docker-compose run --rm api composer validate --strict
-docker-compose run --rm api vendor/bin/phpunit
-docker-compose run --rm api php bin/console doctrine:migrations:migrate --no-interaction
-docker-compose run --rm api php bin/console app:uploads:cleanup-incomplete
-docker-compose run --rm api php bin/console app:media:cleanup-expired
+pnpm validate:api
+pnpm test:api
+./scripts/docker-compose.sh run --rm api php bin/console doctrine:migrations:migrate --no-interaction
+./scripts/docker-compose.sh run --rm api php bin/console app:uploads:cleanup-incomplete
+./scripts/docker-compose.sh run --rm api php bin/console app:media:cleanup-expired
 ```
 
 ## Start Web App
