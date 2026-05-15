@@ -4,6 +4,8 @@ vendor/
 package-lock.json
 .env
 .env.local
+!apps/api/.env
+!apps/api/.env.test
 .DS_Store
 dist/
 build/

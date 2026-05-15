@@ -1,14 +1,26 @@
-# Symfony API Skeleton
+# Symfony Media Upload API
 
-This folder is reserved for the Symfony 6 backend.
+Symfony 6 backend for the media upload assignment.
 
-Recommended creation command during implementation:
+## Run
+
+From the repository root:
 
 ```bash
-composer create-project symfony/skeleton apps/api
-cd apps/api
-composer require symfony/orm-pack symfony/validator symfony/mime symfony/rate-limiter
-composer require --dev symfony/test-pack
+docker-compose up api
 ```
 
-The API should implement the contract documented in [../../docs/api.md](../../docs/api.md).
+API base URL:
+
+```text
+http://localhost:8000/api
+```
+
+## Useful Commands
+
+```bash
+docker-compose run --rm api php bin/console doctrine:migrations:migrate --no-interaction
+docker-compose run --rm api vendor/bin/phpunit
+docker-compose run --rm api php bin/console app:uploads:cleanup-incomplete
+docker-compose run --rm api php bin/console app:media:cleanup-expired
+```
