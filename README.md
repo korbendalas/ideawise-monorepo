@@ -83,7 +83,7 @@ POST /api/uploads/initiate
   -> create upload session or return existing file if checksum already exists
 
 PUT /api/uploads/{uploadId}/chunks/{chunkIndex}
-  -> receive one multipart chunk named "chunk"
+  -> receive one raw application/octet-stream chunk in the request body
   -> enforce 1 MB chunk size, except smaller final chunk
 
 GET /api/uploads/{uploadId}/status

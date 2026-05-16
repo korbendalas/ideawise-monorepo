@@ -106,6 +106,24 @@ final class UploadApiTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testUploadChunkRejectsEmptyRawPutBodyWithChunkError(): void
+    {
+        $client = $this->createUploadClient();
+        $uploadId = $this->initiate($client, 68, 1);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: ''
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        $payload = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('invalid_chunk', $payload['error']['code']);
+        self::assertSame('Chunk body must not be empty.', $payload['error']['message']);
+    }
+
     public function testFinalizeCreatesMediaFile(): void
     {
         $client = $this->createUploadClient();
@@ -128,6 +146,15 @@ final class UploadApiTest extends WebTestCase
 
         $client->request('GET', $payload['file']['url']);
         self::assertResponseIsSuccessful();
+    }
+
+    public function testMediaRouteRejectsEncodedTraversal(): void
+    {
+        $client = $this->createUploadClient();
+
+        $client->request('GET', '/media/%2e%2e/secret.jpg');
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     private function createUploadClient(): KernelBrowser

@@ -134,7 +134,7 @@ final class UploadChunkController
     {
         $content = $request->getContent();
         if ($content === '') {
-            return [null, null];
+            throw new UploadException('invalid_chunk', 'Chunk body must not be empty.');
         }
 
         $path = tempnam(sys_get_temp_dir(), 'upload_chunk_');

@@ -37,7 +37,7 @@ export function validateFiles(files: ValidatableFile[], options: ValidationOptio
     if (file.size <= 0) {
       errors.push({
         code: "invalid_file_size",
-        message: `${file.name} is empty and cannot be uploaded.`,
+        message: "File must not be empty.",
         retryable: false
       });
     } else if (file.size > options.maxFileSizeBytes) {
