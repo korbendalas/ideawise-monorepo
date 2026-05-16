@@ -27,6 +27,7 @@ export const mobileUploadConfig = {
   }),
   maxFileSizeBytes: 250 * 1024 * 1024,
   maxFilesPerBatch: 10,
+  draftPersistenceDebounceMs: 750,
   completedHistoryLimit: 25
 } as const;
 

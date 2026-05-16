@@ -1,6 +1,6 @@
 import type { UploadTaskSnapshot } from "@media-upload/shared-types";
 import { ApiClient, UploadManager, type UploadSource } from "@media-upload/upload-client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { mobileUploadConfig } from "../config/uploadConfig";
 import {
   deserializeMobileUploadDrafts,
@@ -48,6 +48,8 @@ export function useMobileUploadManager(): MobileUploadManagerState {
   const [tasks, setTasks] = useState<UploadTaskSnapshot[]>(() => manager.listTasks());
   const [completedHistory, setCompletedHistory] = useState<UploadTaskSnapshot[]>([]);
   const [draftCount, setDraftCount] = useState(0);
+  const draftPersistenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSerializedDraftsRef = useRef(serializeMobileUploadDrafts(tasks));
 
   useEffect(() => manager.subscribe(setTasks), [manager]);
 
@@ -98,10 +100,34 @@ export function useMobileUploadManager(): MobileUploadManagerState {
 
   useEffect(() => {
     const serialized = serializeMobileUploadDrafts(tasks);
+    latestSerializedDraftsRef.current = serialized;
     const drafts = deserializeMobileUploadDrafts(serialized);
     setDraftCount(drafts.length);
-    void getAsyncStorage().then((storage) => storage.setItem(mobileUploadDraftsKey, serialized));
+
+    if (draftPersistenceTimerRef.current !== null) {
+      clearTimeout(draftPersistenceTimerRef.current);
+    }
+
+    draftPersistenceTimerRef.current = setTimeout(() => {
+      draftPersistenceTimerRef.current = null;
+      void getAsyncStorage().then((storage) =>
+        storage.setItem(mobileUploadDraftsKey, latestSerializedDraftsRef.current)
+      );
+    }, mobileUploadConfig.draftPersistenceDebounceMs);
   }, [tasks]);
+
+  useEffect(
+    () => () => {
+      const pendingDrafts = latestSerializedDraftsRef.current;
+      if (draftPersistenceTimerRef.current !== null) {
+        clearTimeout(draftPersistenceTimerRef.current);
+        draftPersistenceTimerRef.current = null;
+      }
+
+      void getAsyncStorage().then((storage) => storage.setItem(mobileUploadDraftsKey, pendingDrafts));
+    },
+    []
+  );
 
   return {
     tasks,
