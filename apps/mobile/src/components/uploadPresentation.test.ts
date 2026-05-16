@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatBytes, getAvailableActions, getStatusTone } from "./uploadPresentation";
+import {
+  formatBytes,
+  getAvailableActions,
+  getStatusTone,
+} from "./uploadPresentation";
 
 test("formatBytes uses readable units", () => {
   assert.equal(formatBytes(0), "0 B");

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "tsx --test src/*.test.ts",
+    "test": "tsx --test 'src/**/*.test.ts'",
     "lint": "echo \"lint not configured yet\"",
     "typecheck": "tsc --noEmit"
   },

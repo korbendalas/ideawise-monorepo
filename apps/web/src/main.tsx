@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { UploadApp } from "./UploadApp";
+import { UploadApp } from "./features/UploadApp";
 import "./styles.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(

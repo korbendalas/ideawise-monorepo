@@ -75,8 +75,9 @@ final class UploadApiTest extends WebTestCase
     public function testUploadChunkAndStatusReturnsUploadedIndexes(): void
     {
         $client = $this->createUploadClient();
-        $uploadId = $this->initiate($client, 68, 1);
-        $chunk = $this->uploadedFileFromString($this->jpegBytes());
+        $bytes = $this->jpegBytes();
+        $uploadId = $this->initiate($client, strlen($bytes), 1);
+        $chunk = $this->uploadedFileFromString($bytes);
 
         $client->request('PUT', sprintf('/api/uploads/%s/chunks/0', $uploadId), files: ['chunk' => $chunk]);
 
