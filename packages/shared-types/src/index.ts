@@ -3,27 +3,36 @@ export const MAX_CONCURRENT_TRANSFERS = 3;
 export const MAX_RETRIES_PER_CHUNK = 3;
 export const MAX_FILES_PER_BATCH = 10;
 
-export type UploadStatus =
-  | "queued"
-  | "initializing"
-  | "uploading"
-  | "paused"
-  | "retrying"
-  | "finalizing"
-  | "completed"
-  | "failed"
-  | "cancelled";
 
-export type UploadErrorCode =
-  | "invalid_type"
-  | "invalid_file_size"
-  | "file_too_large"
-  | "too_many_files"
-  | "network_error"
-  | "chunk_rejected"
-  | "rate_limited"
-  | "server_validation_failed"
-  | "cancelled";
+export const UploadStatus = {
+  Queued: "queued",
+  Initializing: "initializing",
+  Uploading: "uploading",
+  Paused: "paused",
+  Retrying: "retrying",
+  Finalizing: "finalizing",
+  Completed: "completed",
+  Failed: "failed",
+  Cancelled: "cancelled"
+} as const;
+
+export type UploadStatus = (typeof UploadStatus)[keyof typeof UploadStatus];
+
+
+export const UploadErrorCode = {
+  InvalidType: "invalid_type",
+  InvalidFileSize: "invalid_file_size",
+  FileTooLarge: "file_too_large",
+  TooManyFiles: "too_many_files",
+  NetworkError: "network_error",
+  ChunkRejected: "chunk_rejected",
+  RateLimited: "rate_limited",
+  ServerValidationFailed: "server_validation_failed",
+  Cancelled: "cancelled"
+} as const;
+
+export type UploadErrorCode = (typeof UploadErrorCode)[keyof typeof UploadErrorCode];
+
 
 export type UploadError = {
   code: UploadErrorCode;

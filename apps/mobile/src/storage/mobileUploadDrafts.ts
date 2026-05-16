@@ -1,4 +1,4 @@
-import type { UploadTaskSnapshot } from "@media-upload/shared-types";
+import { UploadStatus, type UploadTaskSnapshot } from "@media-upload/shared-types";
 
 export const mobileUploadDraftsKey = "media-upload.mobile.drafts.v1";
 
@@ -13,19 +13,24 @@ export type MobileUploadDraft = {
     previewUri?: string;
     checksum?: string;
   };
-  status: "queued" | "paused" | "failed";
+  status: typeof UploadStatus.Queued | typeof UploadStatus.Paused | typeof UploadStatus.Failed;
   uploadedChunkIndexes: number[];
   createdAt: string;
   updatedAt: string;
 };
 
-const resumableStatuses = new Set<MobileUploadDraft["status"]>(["queued", "paused", "failed"]);
+const resumableStatuses = new Set<MobileUploadDraft["status"]>([
+  UploadStatus.Queued,
+  UploadStatus.Paused,
+  UploadStatus.Failed
+]);
 
-export function serializeMobileUploadDrafts(tasks: UploadTaskSnapshot[]): string {
-  return JSON.stringify(tasks.map(toMobileUploadDraft).filter((draft): draft is MobileUploadDraft => draft !== null));
-}
+export const serializeMobileUploadDrafts = (tasks: UploadTaskSnapshot[]): string =>
+  JSON.stringify(
+    tasks.map(toMobileUploadDraft).filter((draft): draft is MobileUploadDraft => draft !== null)
+  );
 
-export function deserializeMobileUploadDrafts(value: string | null): MobileUploadDraft[] {
+export const deserializeMobileUploadDrafts = (value: string | null): MobileUploadDraft[] => {
   if (!value) {
     return [];
   }
@@ -36,13 +41,13 @@ export function deserializeMobileUploadDrafts(value: string | null): MobileUploa
   } catch {
     return [];
   }
-}
+};
 
-export function mergeMobileUploadDrafts(
+export const mergeMobileUploadDrafts = (
   existing: MobileUploadDraft[],
   incoming: MobileUploadDraft[],
   limit: number
-): MobileUploadDraft[] {
+): MobileUploadDraft[] => {
   const byId = new Map<string, MobileUploadDraft>();
 
   for (const draft of [...existing, ...incoming]) {
@@ -55,9 +60,9 @@ export function mergeMobileUploadDrafts(
   return Array.from(byId.values())
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, limit);
-}
+};
 
-function toMobileUploadDraft(task: UploadTaskSnapshot): MobileUploadDraft | null {
+const toMobileUploadDraft = (task: UploadTaskSnapshot): MobileUploadDraft | null => {
   if (!isDraftStatus(task.status) || !task.file.uri) {
     return null;
   }
@@ -78,13 +83,12 @@ function toMobileUploadDraft(task: UploadTaskSnapshot): MobileUploadDraft | null
     createdAt: task.createdAt,
     updatedAt: task.updatedAt
   };
-}
+};
 
-function isDraftStatus(status: UploadTaskSnapshot["status"]): status is MobileUploadDraft["status"] {
-  return resumableStatuses.has(status as MobileUploadDraft["status"]);
-}
+const isDraftStatus = (status: UploadTaskSnapshot["status"]): status is MobileUploadDraft["status"] =>
+  resumableStatuses.has(status as MobileUploadDraft["status"]);
 
-function isMobileUploadDraft(value: unknown): value is MobileUploadDraft {
+const isMobileUploadDraft = (value: unknown): value is MobileUploadDraft => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -97,9 +101,11 @@ function isMobileUploadDraft(value: unknown): value is MobileUploadDraft {
     typeof draft.file.name === "string" &&
     typeof draft.file.size === "number" &&
     typeof draft.file.type === "string" &&
-    (draft.status === "queued" || draft.status === "paused" || draft.status === "failed") &&
+    (draft.status === UploadStatus.Queued ||
+      draft.status === UploadStatus.Paused ||
+      draft.status === UploadStatus.Failed) &&
     Array.isArray(draft.uploadedChunkIndexes) &&
     typeof draft.createdAt === "string" &&
     typeof draft.updatedAt === "string"
   );
-}
+};

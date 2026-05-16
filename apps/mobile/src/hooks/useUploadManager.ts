@@ -1,6 +1,7 @@
-import type { UploadTaskSnapshot } from "@media-upload/shared-types";
+import { UploadStatus, type UploadTaskSnapshot } from "@media-upload/shared-types";
 import { ApiClient, UploadManager, type UploadSource } from "@media-upload/upload-client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { MobileUploadManagerState, MobileUploadSummary } from "../types/upload";
 import { mobileUploadConfig } from "../config/uploadConfig";
 import {
   deserializeMobileUploadDrafts,
@@ -13,31 +14,16 @@ import {
   mobileUploadHistoryKey,
   serializeMobileUploadHistory
 } from "../storage/mobileUploadHistory";
+import { getAsyncStorage } from "../utils/asyncStorage";
+import { areTaskListsEqual, summarizeTasks } from "../utils/taskSummary";
 
-export type MobileUploadSummary = {
-  queued: number;
-  active: number;
-  completed: number;
-  failed: number;
-  uploadedBytes: number;
-  totalBytes: number;
-  percentage: number;
-};
+// Re-export types for consumers that import from this module.
+export type { MobileUploadSummary, MobileUploadManagerState };
 
-export type MobileUploadManagerState = {
-  tasks: UploadTaskSnapshot[];
-  activeTasks: UploadTaskSnapshot[];
-  completedTasks: UploadTaskSnapshot[];
-  completedHistory: UploadTaskSnapshot[];
-  draftCount: number;
-  summary: MobileUploadSummary;
-  queueFiles: (sources: UploadSource[]) => UploadTaskSnapshot[];
-  pause: (localId: string) => void;
-  resume: (localId: string) => void;
-  cancel: (localId: string) => Promise<void>;
-};
+// Re-export pure helpers so existing tests continue to work.
+export { summarizeTasks } from "../utils/taskSummary";
 
-export function useMobileUploadManager(): MobileUploadManagerState {
+export const useMobileUploadManager = (): MobileUploadManagerState => {
   const manager = useMemo(
     () =>
       new UploadManager({
@@ -45,6 +31,7 @@ export function useMobileUploadManager(): MobileUploadManagerState {
       }),
     []
   );
+
   const [tasks, setTasks] = useState<UploadTaskSnapshot[]>(() => manager.listTasks());
   const [completedHistory, setCompletedHistory] = useState<UploadTaskSnapshot[]>([]);
   const [draftCount, setDraftCount] = useState(0);
@@ -53,25 +40,28 @@ export function useMobileUploadManager(): MobileUploadManagerState {
 
   useEffect(() => manager.subscribe(setTasks), [manager]);
 
-  const activeTasks = useMemo(() => tasks.filter((task) => task.status !== "completed"), [tasks]);
-  const completedTasks = useMemo(() => tasks.filter((task) => task.status === "completed"), [tasks]);
+  const activeTasks = useMemo(
+    () => tasks.filter((task) => task.status !== UploadStatus.Completed),
+    [tasks]
+  );
+  const completedTasks = useMemo(
+    () => tasks.filter((task) => task.status === UploadStatus.Completed),
+    [tasks]
+  );
 
+  // Load persisted history and draft count on mount
   useEffect(() => {
     let mounted = true;
 
     void getAsyncStorage().then((storage) =>
       storage.getItem(mobileUploadHistoryKey).then((value) => {
-        if (mounted) {
-          setCompletedHistory(deserializeMobileUploadHistory(value));
-        }
+        if (mounted) setCompletedHistory(deserializeMobileUploadHistory(value));
       })
     );
 
     void getAsyncStorage().then((storage) =>
       storage.getItem(mobileUploadDraftsKey).then((value) => {
-        if (mounted) {
-          setDraftCount(deserializeMobileUploadDrafts(value).length);
-        }
+        if (mounted) setDraftCount(deserializeMobileUploadDrafts(value).length);
       })
     );
 
@@ -80,13 +70,16 @@ export function useMobileUploadManager(): MobileUploadManagerState {
     };
   }, []);
 
+  // Persist completed history whenever it changes
   useEffect(() => {
-    if (completedTasks.length === 0) {
-      return;
-    }
+    if (completedTasks.length === 0) return;
 
     setCompletedHistory((currentHistory) => {
-      const merged = mergeCompletedHistoryState(currentHistory, completedTasks, mobileUploadConfig.completedHistoryLimit);
+      const merged = mergeCompletedHistoryState(
+        currentHistory,
+        completedTasks,
+        mobileUploadConfig.completedHistoryLimit
+      );
 
       if (merged !== currentHistory) {
         void getAsyncStorage().then((storage) =>
@@ -98,11 +91,11 @@ export function useMobileUploadManager(): MobileUploadManagerState {
     });
   }, [completedTasks]);
 
+  // Debounced draft persistence on task changes
   useEffect(() => {
     const serialized = serializeMobileUploadDrafts(tasks);
     latestSerializedDraftsRef.current = serialized;
-    const drafts = deserializeMobileUploadDrafts(serialized);
-    setDraftCount(drafts.length);
+    setDraftCount(deserializeMobileUploadDrafts(serialized).length);
 
     if (draftPersistenceTimerRef.current !== null) {
       clearTimeout(draftPersistenceTimerRef.current);
@@ -116,6 +109,7 @@ export function useMobileUploadManager(): MobileUploadManagerState {
     }, mobileUploadConfig.draftPersistenceDebounceMs);
   }, [tasks]);
 
+  // Flush drafts synchronously on unmount
   useEffect(
     () => () => {
       const pendingDrafts = latestSerializedDraftsRef.current;
@@ -123,8 +117,9 @@ export function useMobileUploadManager(): MobileUploadManagerState {
         clearTimeout(draftPersistenceTimerRef.current);
         draftPersistenceTimerRef.current = null;
       }
-
-      void getAsyncStorage().then((storage) => storage.setItem(mobileUploadDraftsKey, pendingDrafts));
+      void getAsyncStorage().then((storage) =>
+        storage.setItem(mobileUploadDraftsKey, pendingDrafts)
+      );
     },
     []
   );
@@ -133,10 +128,14 @@ export function useMobileUploadManager(): MobileUploadManagerState {
     tasks,
     activeTasks,
     completedTasks,
-    completedHistory: mergeMobileUploadHistory(completedHistory, completedTasks, mobileUploadConfig.completedHistoryLimit),
+    completedHistory: mergeMobileUploadHistory(
+      completedHistory,
+      completedTasks,
+      mobileUploadConfig.completedHistoryLimit
+    ),
     draftCount,
     summary: summarizeTasks(tasks),
-    queueFiles: (sources) =>
+    queueFiles: (sources: UploadSource[]) =>
       sources.map((source) => {
         const task = manager.addFile(source);
         void manager.start(task.localId);
@@ -146,44 +145,17 @@ export function useMobileUploadManager(): MobileUploadManagerState {
     resume: (localId) => manager.resume(localId),
     cancel: (localId) => manager.cancel(localId)
   };
-}
+};
 
-export function mergeCompletedHistoryState(
+/**
+ * Merges incoming completed tasks into history, returning the same reference
+ * if nothing has changed (prevents unnecessary re-renders and storage writes).
+ */
+export const mergeCompletedHistoryState = (
   currentHistory: UploadTaskSnapshot[],
   completedTasks: UploadTaskSnapshot[],
   limit: number
-): UploadTaskSnapshot[] {
+): UploadTaskSnapshot[] => {
   const merged = mergeMobileUploadHistory(currentHistory, completedTasks, limit);
   return areTaskListsEqual(currentHistory, merged) ? currentHistory : merged;
-}
-
-async function getAsyncStorage() {
-  const module = await import("@react-native-async-storage/async-storage");
-  return module.default;
-}
-
-export function summarizeTasks(tasks: UploadTaskSnapshot[]): MobileUploadSummary {
-  const uploadedBytes = tasks.reduce((sum, task) => sum + task.progress.uploadedBytes, 0);
-  const totalBytes = tasks.reduce((sum, task) => sum + task.progress.totalBytes, 0);
-
-  return {
-    queued: tasks.filter((task) => task.status === "queued" || task.status === "initializing").length,
-    active: tasks.filter((task) => ["uploading", "retrying", "finalizing"].includes(task.status)).length,
-    completed: tasks.filter((task) => task.status === "completed").length,
-    failed: tasks.filter((task) => task.status === "failed").length,
-    uploadedBytes,
-    totalBytes,
-    percentage: totalBytes === 0 ? 0 : Math.round((uploadedBytes / totalBytes) * 100)
-  };
-}
-
-function areTaskListsEqual(left: UploadTaskSnapshot[], right: UploadTaskSnapshot[]): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  return left.every((task, index) => {
-    const other = right[index];
-    return Boolean(other) && task.localId === other.localId && task.status === other.status && task.updatedAt === other.updatedAt;
-  });
-}
+};
