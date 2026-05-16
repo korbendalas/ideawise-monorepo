@@ -100,6 +100,29 @@ npm run stop:backend
 
 If ports are already in use, stop older local servers or Docker containers and run `npm run dev:all` again.
 
+### Environment Variables
+
+No root `.env` file is required for the normal local demo.
+
+The backend ships with local Docker-friendly defaults in `apps/api/.env`:
+
+```dotenv
+APP_ENV=dev
+DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"
+UPLOAD_CHUNK_SIZE=1048576
+UPLOAD_TMP_DIR="%kernel.project_dir%/var/storage/tmp"
+UPLOAD_MEDIA_DIR="%kernel.project_dir%/var/storage/media"
+```
+
+Client-side overrides are optional:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000/api npm run dev:web
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8000/api npm run dev:mobile
+```
+
+Use `EXPO_PUBLIC_API_BASE_URL` when the mobile app cannot reach `localhost`, especially on Android emulators or physical devices.
+
 ## Backend Architecture
 
 ```text
