@@ -3,20 +3,35 @@
   "version": "0.1.0",
   "private": true,
   "description": "Cross-platform media upload assignment with React, Expo, Symfony 6, and shared chunked upload logic.",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/web",
+    "apps/mobile",
+    "packages/*"
+  ],
   "scripts": {
-    "dev:web": "pnpm --filter @media-upload/web dev",
-    "dev:mobile": "pnpm --filter @media-upload/mobile start",
+    "dev:web": "npm --workspace @media-upload/web run dev",
+    "dev:mobile": "npm --workspace @media-upload/mobile run start",
     "dev:api": "./scripts/docker-compose.sh up api",
+    "dev:backend": "npm run dev:api",
     "dev:api:detached": "./scripts/docker-compose.sh up -d api",
+    "dev:backend:detached": "npm run dev:api:detached",
+    "dev:start": "./scripts/start-dev.sh",
+    "dev:all": "./scripts/start-dev.sh",
+    "run:all": "./scripts/start-dev.sh",
     "logs:api": "./scripts/docker-compose.sh logs -f api",
+    "logs:backend": "npm run logs:api",
     "stop:api": "./scripts/docker-compose.sh down",
+    "stop:backend": "npm run stop:api",
     "test:api": "./scripts/docker-compose.sh run --rm api vendor/bin/phpunit",
+    "test:backend": "npm run test:api",
     "validate:api": "./scripts/docker-compose.sh run --rm api composer validate --strict",
-    "test": "pnpm -r test",
-    "test:client": "pnpm --filter @media-upload/upload-client test",
-    "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
+    "validate:backend": "npm run validate:api",
+    "test": "npm run test --workspaces --if-present",
+    "test:client": "npm --workspace @media-upload/upload-client run test",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean:install": "rm -rf node_modules apps/web/node_modules apps/mobile/node_modules package-lock.json && npm install"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

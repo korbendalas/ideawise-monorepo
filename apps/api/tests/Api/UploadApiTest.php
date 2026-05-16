@@ -75,8 +75,9 @@ final class UploadApiTest extends WebTestCase
     public function testUploadChunkAndStatusReturnsUploadedIndexes(): void
     {
         $client = $this->createUploadClient();
-        $uploadId = $this->initiate($client, 68, 1);
-        $chunk = $this->uploadedFileFromString($this->jpegBytes());
+        $bytes = $this->jpegBytes();
+        $uploadId = $this->initiate($client, strlen($bytes), 1);
+        $chunk = $this->uploadedFileFromString($bytes);
 
         $client->request('PUT', sprintf('/api/uploads/%s/chunks/0', $uploadId), files: ['chunk' => $chunk]);
 
@@ -122,6 +123,40 @@ final class UploadApiTest extends WebTestCase
         $payload = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('invalid_chunk', $payload['error']['code']);
         self::assertSame('Chunk body must not be empty.', $payload['error']['message']);
+    }
+
+    public function testUploadChunkRejectsOversizedRawPutBodyWhileBuffering(): void
+    {
+        $client = $this->createUploadClient();
+        $uploadId = $this->initiate($client, 1048577, 2);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: str_repeat('a', 1048577)
+        );
+
+        self::assertResponseStatusCodeSame(413);
+        $payload = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('chunk_too_large', $payload['error']['code']);
+    }
+
+    public function testUploadChunkRejectsShortNonFinalChunk(): void
+    {
+        $client = $this->createUploadClient();
+        $uploadId = $this->initiate($client, 1048577, 2);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: 'too short'
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        $payload = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('invalid_chunk', $payload['error']['code']);
     }
 
     public function testFinalizeCreatesMediaFile(): void

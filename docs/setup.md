@@ -3,24 +3,17 @@
 ## Prerequisites
 
 - Node.js 20+
-- pnpm 9+
+- npm 10+
 - Docker Desktop, including Docker Compose
 
 Local PHP, Composer, and Symfony CLI are not required. The backend runs inside Docker.
 
 ## Install JavaScript Dependencies
 
-If pnpm is not installed:
+Install dependencies:
 
 ```bash
-corepack enable
-corepack prepare pnpm@9.15.0 --activate
-```
-
-Then install dependencies:
-
-```bash
-pnpm install
+npm install
 ```
 
 ## Start Backend API
@@ -28,7 +21,7 @@ pnpm install
 From the repository root:
 
 ```bash
-pnpm dev:api
+npm run dev:backend
 ```
 
 The API and Swagger UI are available at:
@@ -43,26 +36,26 @@ The container installs Composer dependencies, creates the SQLite database, runs 
 To run the API in the background:
 
 ```bash
-pnpm dev:api:detached
+npm run dev:backend:detached
 ```
 
 To follow backend logs:
 
 ```bash
-pnpm logs:api
+npm run logs:backend
 ```
 
 To stop the backend:
 
 ```bash
-pnpm stop:api
+npm run stop:backend
 ```
 
 ## Backend Commands
 
 ```bash
-pnpm validate:api
-pnpm test:api
+npm run validate:backend
+npm run test:backend
 ./scripts/docker-compose.sh run --rm api php bin/console doctrine:migrations:migrate --no-interaction
 ./scripts/docker-compose.sh run --rm api php bin/console app:uploads:cleanup-incomplete
 ./scripts/docker-compose.sh run --rm api php bin/console app:media:cleanup-expired
@@ -71,14 +64,38 @@ pnpm test:api
 ## Start Web App
 
 ```bash
-pnpm dev:web
+npm run dev:web
 ```
 
 ## Start Mobile App
 
 ```bash
-pnpm dev:mobile
+npm run dev:mobile
 ```
+
+## Mobile API URL
+
+Use the API URL that the simulator or device can reach.
+
+For iOS simulator:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8000/api npm run dev:mobile
+```
+
+For Android emulator:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000/api npm run dev:mobile
+```
+
+For a physical device, use the computer's LAN IP:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8000/api npm run dev:mobile
+```
+
+The mobile app requests gallery and camera permissions through Expo Image Picker. It persists completed upload history and incomplete upload draft metadata locally with AsyncStorage.
 
 ## Backend Environment
 

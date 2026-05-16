@@ -2,7 +2,14 @@
 
 Production-grade media upload assignment built as a monorepo with a Symfony 6 backend, React web app scaffold, Expo mobile app scaffold, and shared TypeScript upload packages.
 
-The backend is the currently implemented part of the system. It provides a resumable-style chunked upload API with 1 MB chunks, server-side validation, reassembly, deduplication, cleanup commands, tests, and generated OpenAPI documentation.
+The backend, web app, shared upload client, and Expo mobile upload flow are implemented as the current MVP. The system provides a resumable-style chunked upload API with 1 MB chunks, server-side validation, reassembly, deduplication, cleanup commands, tests, generated OpenAPI documentation, web drag-and-drop, and mobile picker/camera upload UX.
+
+## Assignment Coverage
+
+- Web frontend: React/Vite upload console with drag-and-drop, previews, progress, controls, and local history.
+- Mobile frontend: Expo app with media library picker, camera capture, permissions, previews, upload queue, controls, and persisted mobile history/draft metadata.
+- Server APIs: Symfony 6 chunked upload API with validation, reassembly, deduplication, cleanup, rate limiting, and Swagger docs.
+- Tests: PHPUnit backend tests, shared upload-client unit tests, web history tests, and mobile upload helper/storage/presentation tests.
 
 ## Purpose
 
@@ -24,10 +31,10 @@ The implementation is intentionally reviewable for an interview/offline assignme
 - Backend: Symfony 6.4, Doctrine ORM, SQLite, PHPUnit
 - API Docs: NelmioApiDocBundle, OpenAPI 3, Swagger UI
 - Runtime: Docker Compose
-- Web: React/Vite scaffold
-- Mobile: Expo/React Native scaffold
+- Web: React/Vite
+- Mobile: Expo/React Native
 - Shared packages: TypeScript upload client and shared DTO/constants
-- Monorepo: pnpm workspaces
+- Monorepo: npm workspaces
 
 ## Backend Architecture
 
@@ -109,7 +116,7 @@ OpenAPI YAML:  http://localhost:8000/api/doc.yaml
 Prerequisites:
 
 - Node.js 20+
-- pnpm 9+
+- npm 10+
 - Docker Desktop with Docker Compose
 
 Local PHP, Composer, and Symfony CLI are not required.
@@ -117,33 +124,31 @@ Local PHP, Composer, and Symfony CLI are not required.
 Install JavaScript dependencies:
 
 ```bash
-corepack enable
-corepack prepare pnpm@9.15.0 --activate
-pnpm install
+npm install
 ```
 
 Start the backend API:
 
 ```bash
-pnpm dev:api
+npm run dev:backend
 ```
 
 Start the backend in the background:
 
 ```bash
-pnpm dev:api:detached
+npm run dev:backend:detached
 ```
 
 Follow backend logs:
 
 ```bash
-pnpm logs:api
+npm run logs:backend
 ```
 
 Stop the backend:
 
 ```bash
-pnpm stop:api
+npm run stop:backend
 ```
 
 ## Commands
@@ -151,18 +156,18 @@ pnpm stop:api
 From the repository root:
 
 ```bash
-pnpm dev:api              # start Symfony API through Docker Compose
-pnpm dev:api:detached     # start API in the background
-pnpm logs:api             # follow API logs
-pnpm stop:api             # stop Docker Compose services
-pnpm validate:api         # validate backend composer.json
-pnpm test:api             # run backend PHPUnit suite
-pnpm dev:web              # start React web app scaffold
-pnpm dev:mobile           # start Expo mobile app scaffold
-pnpm test                 # run workspace tests
-pnpm test:client          # run shared upload-client tests
-pnpm lint                 # run workspace lint scripts
-pnpm typecheck            # run workspace type checks
+npm run dev:backend              # start Symfony API through Docker Compose
+npm run dev:backend:detached     # start API in the background
+npm run logs:backend             # follow API logs
+npm run stop:backend             # stop Docker Compose services
+npm run validate:backend         # validate backend composer.json
+npm run test:backend             # run backend PHPUnit suite
+npm run dev:web                  # start React web app scaffold
+npm run dev:mobile               # start Expo mobile app scaffold
+npm test                         # run workspace tests
+npm run test:client              # run shared upload-client tests
+npm run lint                     # run workspace lint scripts
+npm run typecheck                # run workspace type checks
 ```
 
 Backend maintenance commands:
@@ -255,8 +260,8 @@ The backend currently has PHPUnit coverage for validation, local storage, file t
 Current verification commands:
 
 ```bash
-pnpm validate:api
-pnpm test:api
+npm run validate:backend
+npm run test:backend
 ./scripts/docker-compose.sh run --rm api php bin/console lint:yaml config
 ./scripts/docker-compose.sh run --rm api php bin/console lint:container
 ./scripts/docker-compose.sh run --rm api php bin/console nelmio:apidoc:dump --format=json

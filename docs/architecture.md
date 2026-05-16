@@ -38,6 +38,7 @@ Responsibilities:
 - Permission states for camera/gallery/storage
 - Preview and metadata display
 - Upload progress UI
+- Pause/resume/cancel controls
 - Local upload state using AsyncStorage
 
 ### Shared Upload Client
@@ -89,6 +90,12 @@ var/storage/media/{yyyy}/{mm}/{dd}/{checksum}.{extension}
 ```
 
 This keeps local development and review simple. A `StorageService` boundary should make S3 or MinIO a later replacement without changing controller behavior.
+
+## Mobile Background Behavior
+
+The Expo MVP persists completed upload history and incomplete upload draft metadata locally. When the app returns to the foreground, it surfaces resumable draft state and lets the user continue through the shared upload manager where the media URI can still be read.
+
+True OS-level background transfer on iOS/Android is a production extension. It would require a native background upload module, custom dev client, or platform-specific upload service rather than plain Expo Image Picker plus `fetch`.
 
 ## Production Hooks
 

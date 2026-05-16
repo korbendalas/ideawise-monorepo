@@ -102,7 +102,7 @@ final class UploadChunkController
             $temporaryPath = null;
             $chunkFile = $request->files->get('chunk');
             if (!$chunkFile instanceof UploadedFile) {
-                [$chunkFile, $temporaryPath] = $this->uploadedFileFromRawBody($request, $chunkIndex);
+                [$chunkFile, $temporaryPath] = $this->uploadedFileFromRawBody($request, $chunkIndex, $session->getChunkSize());
             }
 
             try {
@@ -130,16 +130,62 @@ final class UploadChunkController
     /**
      * @return array{0: UploadedFile|null, 1: string|null}
      */
-    private function uploadedFileFromRawBody(Request $request, int $chunkIndex): array
+    private function uploadedFileFromRawBody(Request $request, int $chunkIndex, int $maxBytes): array
     {
-        $content = $request->getContent();
-        if ($content === '') {
-            throw new UploadException('invalid_chunk', 'Chunk body must not be empty.');
+        $path = tempnam(sys_get_temp_dir(), 'upload_chunk_');
+        if ($path === false) {
+            throw new UploadException('invalid_chunk', 'Chunk could not be buffered for storage.');
         }
 
-        $path = tempnam(sys_get_temp_dir(), 'upload_chunk_');
-        if ($path === false || file_put_contents($path, $content) === false) {
+        $input = $request->getContent(true);
+        $output = fopen($path, 'wb');
+
+        if (!is_resource($input) || $output === false) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+
             throw new UploadException('invalid_chunk', 'Chunk could not be buffered for storage.');
+        }
+
+        $bytesWritten = 0;
+
+        try {
+            while (!feof($input)) {
+                $bytes = fread($input, 8192);
+                if ($bytes === false) {
+                    throw new UploadException('invalid_chunk', 'Chunk could not be buffered for storage.');
+                }
+
+                if ($bytes === '') {
+                    continue;
+                }
+
+                $bytesWritten += strlen($bytes);
+                if ($bytesWritten > $maxBytes) {
+                    throw new UploadException('chunk_too_large', 'Chunk exceeds the fixed 1MB limit.', false, 413);
+                }
+
+                if (fwrite($output, $bytes) === false) {
+                    throw new UploadException('invalid_chunk', 'Chunk could not be buffered for storage.');
+                }
+            }
+        } catch (UploadException $exception) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+
+            throw $exception;
+        } finally {
+            fclose($output);
+        }
+
+        if ($bytesWritten === 0) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+
+            throw new UploadException('invalid_chunk', 'Chunk body must not be empty.');
         }
 
         return [

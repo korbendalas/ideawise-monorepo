@@ -7,7 +7,7 @@ Symfony 6 backend for the media upload assignment.
 From the repository root:
 
 ```bash
-pnpm dev:api
+npm run dev:backend
 ```
 
 API links:
@@ -22,8 +22,8 @@ OpenAPI YAML:  http://localhost:8000/api/doc.yaml
 ## Useful Commands
 
 ```bash
-pnpm validate:api
-pnpm test:api
+npm run validate:backend
+npm run test:backend
 ./scripts/docker-compose.sh run --rm api php bin/console doctrine:migrations:migrate --no-interaction
 ./scripts/docker-compose.sh run --rm api php bin/console app:uploads:cleanup-incomplete
 ./scripts/docker-compose.sh run --rm api php bin/console app:media:cleanup-expired
