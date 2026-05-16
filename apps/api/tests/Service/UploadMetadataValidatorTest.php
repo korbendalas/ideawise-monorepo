@@ -54,4 +54,24 @@ final class UploadMetadataValidatorTest extends TestCase
             'chunkSize' => 2048,
         ]);
     }
+
+    public function testRejectsEmptyFileWithSpecificErrorCode(): void
+    {
+        $validator = new UploadMetadataValidator(1048576);
+
+        try {
+            $validator->validate([
+                'fileName' => 'empty.jpg',
+                'fileSize' => 0,
+                'mimeType' => 'image/jpeg',
+                'totalChunks' => 0,
+                'chunkSize' => 1048576,
+            ]);
+
+            self::fail('Expected empty file metadata to be rejected.');
+        } catch (UploadException $exception) {
+            self::assertSame('invalid_file_size', $exception->getErrorCode());
+            self::assertSame('File must not be empty.', $exception->getMessage());
+        }
+    }
 }

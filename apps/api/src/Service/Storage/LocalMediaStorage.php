@@ -71,7 +71,7 @@ final class LocalMediaStorage
         $targetPath = sprintf('%s/%s', rtrim($this->mediaRoot, '/'), $relativePath);
 
         $this->ensureDir(dirname($targetPath));
-        rename($sourcePath, $targetPath);
+        $this->moveFile($sourcePath, $targetPath);
 
         return new StoredMediaResult(
             $storedFileName,
@@ -114,6 +114,20 @@ final class LocalMediaStorage
         if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
             throw new RuntimeException(sprintf('Unable to create directory: %s.', $dir));
         }
+    }
+
+    private function moveFile(string $sourcePath, string $targetPath): void
+    {
+        if (@rename($sourcePath, $targetPath)) {
+            return;
+        }
+
+        if (@copy($sourcePath, $targetPath)) {
+            @unlink($sourcePath);
+            return;
+        }
+
+        throw new RuntimeException(sprintf('Unable to store final media file at %s.', $targetPath));
     }
 
     private function extensionForMime(string $mimeType): string

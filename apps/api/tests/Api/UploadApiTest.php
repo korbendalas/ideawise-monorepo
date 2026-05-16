@@ -10,6 +10,9 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class UploadApiTest extends WebTestCase
 {
+    /** @var string[] */
+    private array $tempFiles = [];
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -23,6 +26,19 @@ final class UploadApiTest extends WebTestCase
         }
 
         self::ensureKernelShutdown();
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->tempFiles as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        $this->tempFiles = [];
+
+        parent::tearDown();
     }
 
     public function testInitiateUploadCreatesSession(): void
@@ -74,6 +90,40 @@ final class UploadApiTest extends WebTestCase
         self::assertSame(1, $payload['receivedChunks']);
     }
 
+    public function testUploadChunkAcceptsRawPutBody(): void
+    {
+        $client = $this->createUploadClient();
+        $bytes = $this->jpegBytes();
+        $uploadId = $this->initiate($client, strlen($bytes), 1);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: $bytes
+        );
+
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testUploadChunkRejectsEmptyRawPutBodyWithChunkError(): void
+    {
+        $client = $this->createUploadClient();
+        $uploadId = $this->initiate($client, 68, 1);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: ''
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        $payload = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('invalid_chunk', $payload['error']['code']);
+        self::assertSame('Chunk body must not be empty.', $payload['error']['message']);
+    }
+
     public function testFinalizeCreatesMediaFile(): void
     {
         $client = $this->createUploadClient();
@@ -93,6 +143,18 @@ final class UploadApiTest extends WebTestCase
         self::assertSame('image/jpeg', $payload['file']['mimeType']);
         $path = rtrim((string) self::getContainer()->getParameter('upload.media_dir'), '/').'/'.str_replace('/media/', '', $payload['file']['url']);
         self::assertFileExists($path);
+
+        $client->request('GET', $payload['file']['url']);
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testMediaRouteRejectsEncodedTraversal(): void
+    {
+        $client = $this->createUploadClient();
+
+        $client->request('GET', '/media/%2e%2e/secret.jpg');
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     private function createUploadClient(): KernelBrowser
@@ -121,6 +183,7 @@ final class UploadApiTest extends WebTestCase
     {
         $path = tempnam(sys_get_temp_dir(), 'upload-chunk');
         file_put_contents($path, $contents);
+        $this->tempFiles[] = $path;
 
         return new UploadedFile($path, 'chunk.part', 'application/octet-stream', null, true);
     }
