@@ -27,14 +27,24 @@ Test:
 
 ## Mobile
 
-Use Jest with mocked Expo modules.
+The current MVP uses Node's test runner with `tsx` for pure mobile logic and presentation helpers.
 
 Test:
 
-- Permission accepted/denied states.
 - Picker result normalization.
-- Camera result normalization.
-- Upload task rendering.
+- Completed history serialization and merging.
+- Resumable draft serialization and merging.
+- Upload summary aggregation.
+- Presentation helpers for status, actions, and byte formatting.
+
+Run:
+
+```bash
+npm --workspace @media-upload/mobile test
+npm --workspace @media-upload/mobile run typecheck
+```
+
+Component-level React Native tests with mocked Expo modules are planned hardening once the Expo UI stabilizes.
 
 ## Backend
 
@@ -59,3 +69,16 @@ For the 4-day MVP, document these as planned hardening:
 - k6 script for 100 concurrent uploads.
 - Network failure tests using request aborts and throttling.
 - Mobile E2E with Detox after Expo flow stabilizes.
+
+## Manual Mobile Demo Checklist
+
+- Start backend with `npm run dev:backend:detached`.
+- Start Expo with the correct `EXPO_PUBLIC_API_BASE_URL` for the simulator or device.
+- Deny media permission and confirm the app shows a clear permission message.
+- Allow media permission and select 2-3 image/video files.
+- Confirm validation rejects invalid type, too many files, or oversized files.
+- Confirm each queued file shows preview, metadata, progress, and final completion.
+- Pause and resume one active upload.
+- Cancel one active upload.
+- Capture media from camera and upload it.
+- Restart the app and confirm completed history remains available.

@@ -6,14 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "echo \"Add React Testing Library tests during Day 3 implementation\"",
+    "test": "tsx --test src/*.test.ts",
     "lint": "echo \"lint not configured yet\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
-    "@media-upload/shared-types": "workspace:*",
-    "@media-upload/upload-client": "workspace:*",
+    "@media-upload/shared-types": "file:../../packages/shared-types",
+    "@media-upload/upload-client": "file:../../packages/upload-client",
     "@vitejs/plugin-react": "^4.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

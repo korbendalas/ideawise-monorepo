@@ -72,6 +72,27 @@ describe("UploadManager", () => {
     assert.equal(manager.getTask(task.localId)?.status, "paused");
   });
 
+  it("creates local ids without browser crypto support", () => {
+    const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      value: undefined
+    });
+
+    try {
+      const manager = new UploadManager({ apiClient: new FakeApiClient() });
+      const task = manager.addFile(createSource("phone.jpg", 12));
+
+      assert.match(task.localId, /^upload-/);
+      assert.equal(manager.getTask(task.localId)?.file.name, "phone.jpg");
+    } finally {
+      if (cryptoDescriptor) {
+        Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
+      }
+    }
+  });
+
   it("keeps local cancellation when remote cancellation fails", async () => {
     const api = new FakeApiClient({ failCancel: true });
     const manager = new UploadManager({ apiClient: api });
@@ -171,7 +192,9 @@ class FakeApiClient {
     }
 
     if (signal?.aborted) {
-      throw new DOMException("Upload aborted", "AbortError");
+      const error = new Error("Upload aborted");
+      error.name = "AbortError";
+      throw error;
     }
 
     if (this.failChunkOnce === chunkIndex && this.chunkAttempts[chunkIndex] === 1) {

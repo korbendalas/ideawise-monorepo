@@ -10,8 +10,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Media Upload to select photos and videos.",
-          "cameraPermission": "Allow Media Upload to capture photos and videos."
+          "photosPermission": "Allow Media Upload System to select images and videos for upload.",
+          "cameraPermission": "Allow Media Upload System to capture images and videos for upload.",
+          "microphonePermission": "Allow Media Upload System to record audio with captured videos."
         }
       ]
     ],

@@ -7,7 +7,7 @@ framework:
   rate_limiter:
     upload_api:
       policy: fixed_window
-      limit: 10
+      limit: 300
       interval: '1 minute'
 
 when@test:

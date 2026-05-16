@@ -51,7 +51,7 @@ export class UploadManager {
 
   addFile(file: UploadSource): UploadTaskSnapshot {
     const now = new Date().toISOString();
-    const localId = crypto.randomUUID();
+    const localId = createLocalId();
     const task: UploadTaskSnapshot = {
       localId,
       file,
@@ -372,6 +372,16 @@ export class UploadManager {
   }
 }
 
+function createLocalId(): string {
+  const randomUUID = globalThis.crypto?.randomUUID;
+
+  if (randomUUID) {
+    return randomUUID.call(globalThis.crypto);
+  }
+
+  return `upload-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function delay(ms: number, signal: AbortSignal): Promise<void> {
   throwIfAborted(signal);
 
@@ -385,7 +395,7 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
       "abort",
       () => {
         clearTimeout(timeout);
-        reject(new DOMException("Upload aborted", "AbortError"));
+        reject(createAbortError());
       },
       { once: true }
     );
@@ -393,12 +403,18 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
+  return hasErrorName(error, "AbortError");
+}
+
+function createAbortError(): Error {
+  const error = new Error("Upload aborted");
+  error.name = "AbortError";
+  return error;
 }
 
 function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) {
-    throw new DOMException("Upload aborted", "AbortError");
+    throw createAbortError();
   }
 }
 
@@ -453,6 +469,10 @@ function getErrorRetryable(error: unknown): boolean {
 
 function hasUploadError(error: unknown): error is { error: NonNullable<UploadTaskSnapshot["error"]> } {
   return typeof error === "object" && error !== null && "error" in error;
+}
+
+function hasErrorName(error: unknown, name: string): boolean {
+  return typeof error === "object" && error !== null && "name" in error && error.name === name;
 }
 
 function withoutUndefined<T extends Record<string, unknown>>(value: T): T {
