@@ -64,16 +64,13 @@ Deduplication response:
 
 ```http
 PUT /api/uploads/{uploadId}/chunks/{chunkIndex}
-Content-Type: multipart/form-data
+Content-Type: application/octet-stream
 ```
 
-Fields:
+Body:
 
 ```text
-chunk: binary
-chunkIndex: number
-totalChunks: number
-checksum: optional string
+Raw binary chunk bytes. Send at most 1 MB per chunk; only the final chunk may be smaller.
 ```
 
 Response:
