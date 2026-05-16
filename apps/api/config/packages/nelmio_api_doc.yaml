@@ -9,7 +9,7 @@ nelmio_api_doc:
 
         Standard flow: initiate an upload session, send chunks, poll status when needed, finalize the upload, or cancel to discard temporary chunks.
 
-        Mutation endpoints are rate limited to 300 requests per minute per IP.
+        Mutation endpoints are rate limited to 10 requests per minute per IP.
       version: '1.0.0'
       contact:
         name: Ideawise Engineering

@@ -29,5 +29,13 @@ final class ChunkValidator
         if ($chunk->getSize() > $this->chunkSize) {
             throw new UploadException('chunk_too_large', 'Chunk exceeds the fixed 1MB limit.', false, 413);
         }
+
+        $expectedSize = min($this->chunkSize, $session->getFileSize() - ($chunkIndex * $this->chunkSize));
+        if ($chunk->getSize() !== $expectedSize) {
+            throw new UploadException(
+                'invalid_chunk',
+                sprintf('Chunk %d must be exactly %d byte(s).', $chunkIndex, $expectedSize)
+            );
+        }
     }
 }

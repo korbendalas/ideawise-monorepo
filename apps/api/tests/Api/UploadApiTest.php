@@ -141,6 +141,23 @@ final class UploadApiTest extends WebTestCase
         self::assertSame('chunk_too_large', $payload['error']['code']);
     }
 
+    public function testUploadChunkRejectsShortNonFinalChunk(): void
+    {
+        $client = $this->createUploadClient();
+        $uploadId = $this->initiate($client, 1048577, 2);
+
+        $client->request(
+            'PUT',
+            sprintf('/api/uploads/%s/chunks/0', $uploadId),
+            server: ['CONTENT_TYPE' => 'application/octet-stream'],
+            content: 'too short'
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        $payload = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('invalid_chunk', $payload['error']['code']);
+    }
+
     public function testFinalizeCreatesMediaFile(): void
     {
         $client = $this->createUploadClient();
