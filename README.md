@@ -1,6 +1,6 @@
 # Media File Upload System
 
-Production-grade media upload assignment built as a monorepo with a Symfony 6 backend, React web app scaffold, Expo mobile app scaffold, and shared TypeScript upload packages.
+Production-grade media upload assignment built as a monorepo with a Symfony 6 backend, polished React web app, Expo mobile app, and shared TypeScript upload packages.
 
 The backend, web app, shared upload client, and Expo mobile upload flow are implemented as the current MVP. The system provides a resumable-style chunked upload API with 1 MB chunks, server-side validation, reassembly, deduplication, cleanup commands, tests, generated OpenAPI documentation, web drag-and-drop, and mobile picker/camera upload UX.
 
@@ -30,11 +30,75 @@ The implementation is intentionally reviewable for an interview/offline assignme
 
 - Backend: Symfony 6.4, Doctrine ORM, SQLite, PHPUnit
 - API Docs: NelmioApiDocBundle, OpenAPI 3, Swagger UI
-- Runtime: Docker Compose
+- Runtime: Docker Desktop / Docker Compose
 - Web: React/Vite
 - Mobile: Expo/React Native
 - Shared packages: TypeScript upload client and shared DTO/constants
 - Monorepo: npm workspaces
+
+## Quick Start
+
+This is the fastest path for reviewers. You do not need local PHP, Composer, Symfony CLI, or a local database.
+
+### Prerequisites
+
+Install these first:
+
+- Node.js 20+
+- npm 10+
+- Docker Desktop with Docker Compose
+
+Make sure Docker Desktop is running before starting the project.
+
+### Run Everything
+
+From the repository root:
+
+```bash
+npm install
+npm run dev:all
+```
+
+`npm run dev:all` starts the full local stack:
+
+- Symfony API in Docker at `http://localhost:8000/api`
+- React web app at `http://localhost:5173`
+- Expo/Metro dev server for the mobile app
+
+On the first backend start, Docker runs Composer install, creates storage folders, runs database migrations, and starts the Symfony API server.
+
+### Open The Apps
+
+```text
+Web app:       http://localhost:5173
+API base:      http://localhost:8000/api
+Swagger UI:    http://localhost:8000/api-docs.html
+OpenAPI JSON:  http://localhost:8000/api/doc.json
+```
+
+For mobile, keep the terminal running and use the Expo output:
+
+- Press `i` for the iOS simulator.
+- Press `a` for the Android emulator.
+- Scan the QR code with Expo Go for a physical device.
+
+For a physical device, set the API URL to your machine LAN IP:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8000/api npm run dev:mobile
+```
+
+Use `localhost` for the iOS simulator and `10.0.2.2` for the Android emulator.
+
+### Stop The Stack
+
+Stop the running dev terminal with `Ctrl+C`, then stop backend containers if needed:
+
+```bash
+npm run stop:backend
+```
+
+If ports are already in use, stop older local servers or Docker containers and run `npm run dev:all` again.
 
 ## Backend Architecture
 
@@ -100,70 +164,20 @@ DELETE /api/uploads/{uploadId}
   -> cancel upload and delete temporary chunks
 ```
 
-## Local URLs
-
-After starting the backend:
-
-```text
-API base:      http://localhost:8000/api
-Swagger UI:    http://localhost:8000/api-docs.html
-OpenAPI JSON:  http://localhost:8000/api/doc.json
-OpenAPI YAML:  http://localhost:8000/api/doc.yaml
-```
-
-## Quick Start
-
-Prerequisites:
-
-- Node.js 20+
-- npm 10+
-- Docker Desktop with Docker Compose
-
-Local PHP, Composer, and Symfony CLI are not required.
-
-Install JavaScript dependencies:
-
-```bash
-npm install
-```
-
-Start the backend API:
-
-```bash
-npm run dev:backend
-```
-
-Start the backend in the background:
-
-```bash
-npm run dev:backend:detached
-```
-
-Follow backend logs:
-
-```bash
-npm run logs:backend
-```
-
-Stop the backend:
-
-```bash
-npm run stop:backend
-```
-
 ## Commands
 
 From the repository root:
 
 ```bash
+npm run dev:all                  # one-command local stack: backend + web + mobile
 npm run dev:backend              # start Symfony API through Docker Compose
 npm run dev:backend:detached     # start API in the background
 npm run logs:backend             # follow API logs
 npm run stop:backend             # stop Docker Compose services
 npm run validate:backend         # validate backend composer.json
 npm run test:backend             # run backend PHPUnit suite
-npm run dev:web                  # start React web app scaffold
-npm run dev:mobile               # start Expo mobile app scaffold
+npm run dev:web                  # start React web app
+npm run dev:mobile               # start Expo mobile app
 npm test                         # run workspace tests
 npm run test:client              # run shared upload-client tests
 npm run lint                     # run workspace lint scripts
@@ -237,11 +251,11 @@ apps/api/var/data.db
 ```text
 apps/
   api/       Symfony 6 backend
-  web/       React web frontend scaffold
-  mobile/    Expo mobile frontend scaffold
+  web/       React web upload console
+  mobile/    Expo mobile upload app
 packages/
   shared-types/   shared constants and API DTOs
-  upload-client/  shared upload client package scaffold
+  upload-client/  shared upload validation, API, chunking, retry, and manager logic
 docs/
   api.md
   architecture.md
