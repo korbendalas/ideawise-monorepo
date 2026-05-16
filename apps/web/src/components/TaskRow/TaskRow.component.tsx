@@ -5,9 +5,11 @@ import { formatBytes } from "@/utils/format";
 import { IconButton } from "@/components/IconButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { TaskRowProps } from "./TaskRow.types";
+import { getTaskPreviewImageSrc } from "./TaskRow.utils";
 
 export const TaskRow = ({ task, manager }: TaskRowProps) => {
   const isVideo = task.file.type.startsWith("video/");
+  const previewImageSrc = getTaskPreviewImageSrc(task);
   const canPause =
     task.status === UploadStatus.Uploading ||
     task.status === UploadStatus.Retrying ||
@@ -19,8 +21,8 @@ export const TaskRow = ({ task, manager }: TaskRowProps) => {
   return (
     <article className="grid gap-3 rounded-lg border bg-card p-3 shadow-sm sm:grid-cols-[88px_minmax(0,1fr)_auto]">
       <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-md bg-muted">
-        {task.file.previewUri && !isVideo ? (
-          <img className="size-full object-cover" src={task.file.previewUri} alt="" />
+        {previewImageSrc ? (
+          <img className="size-full object-cover" src={previewImageSrc} alt="" />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             {isVideo ? <FileVideo className="size-6" /> : <ImageIcon className="size-6" />}
